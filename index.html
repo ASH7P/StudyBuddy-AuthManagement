@@ -51,10 +51,8 @@
       (async () => {
         try {
           // 1) Exchange URL for a session (works for recovery / magic link / email confirm)
-          const { data, error } = await client.auth.getSessionFromUrl({
-            url: location.href,
-            storeSession: true
-          });
+          await client.auth.getSessionFromUrl({ storeSession: true });
+
           if (error) throw error;
 
           // 2) Route by link type
