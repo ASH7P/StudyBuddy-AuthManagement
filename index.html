@@ -36,8 +36,8 @@
 
     <script>
       // Fill these with your project details
-      const SUPABASE_URL = 'https://<YOUR-PROJECT-REF>.supabase.co';
-      const SUPABASE_ANON_KEY = '<YOUR-ANON-KEY>'; // safe to expose; keep RLS on
+      const EXPO_PUBLIC_SUPABASE_URL = "https://twysxvxlybbyauhjtilh.supabase.co"
+      const EXPO_PUBLIC_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eXN4dnhseWJieWF1aGp0aWxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzMjI4NzcsImV4cCI6MjA2Nzg5ODg3N30.hMDXzLs7VHVvRvWUwwb9WShp0AoMShgOb-_sMns3g2s"
       const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const qsFromHash = new URLSearchParams(location.hash.slice(1));
