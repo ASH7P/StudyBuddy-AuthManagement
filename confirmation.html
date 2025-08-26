@@ -1,19 +1,109 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <title>Email Confirmed</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    body { font-family: system-ui,-apple-system,BlinkMacSystemFont,sans-serif; padding:2rem; text-align:center; }
-    .card { max-width: 480px; margin: auto; padding:1.5rem; border:1px solid #e2e8f0; border-radius:12px; }
-    .success { color: #16a34a; font-size: 2rem; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="success">Email confirmed!</div>
-    <p>Thanks. You can now return to the app.</p>
-  </div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>Study Buddy – Auth Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; max-width: 440px; margin: auto; }
+      .card { border: 1px solid #ddd; border-radius: 12px; padding: 20px; }
+      input, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #ccc; }
+      button { cursor: pointer; }
+      .muted { opacity: 0.8; font-size: 0.9rem; }
+      .hidden { display: none; }
+      .success { border-color: #5cb85c; }
+      .error { border-color: #d9534f; }
+    </style>
+  </head>
+  <body>
+    <h1>Study Buddy</h1>
+    <div id="panel" class="card">
+      <p id="status">Checking your link…</p>
+
+      <form id="reset-form" class="hidden" autocomplete="off">
+        <input id="pw1" type="password" placeholder="New password" required />
+        <input id="pw2" type="password" placeholder="Confirm new password" required />
+        <button type="submit">Update password</button>
+        <p class="muted">After updating, you can close this page and sign in.</p>
+      </form>
+
+      <div id="done" class="hidden">
+        <p>All set. You can close this page and sign in.</p>
+      </div>
+    </div>
+
+    <script>
+      // Fill these with your project details
+      const SUPABASE_URL = 'https://<YOUR-PROJECT-REF>.supabase.co';
+      const SUPABASE_ANON_KEY = '<YOUR-ANON-KEY>'; // safe to expose; keep RLS on
+      const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const qsFromHash = new URLSearchParams(location.hash.slice(1));
+      const type = qsFromHash.get('type'); // e.g., "recovery", "signup", "magiclink", etc.
+
+      const statusEl = document.getElementById('status');
+      const formEl = document.getElementById('reset-form');
+      const doneEl = document.getElementById('done');
+      const panelEl = document.getElementById('panel');
+
+      (async () => {
+        try {
+          // 1) Exchange URL for a session (works for recovery / magic link / email confirm)
+          const { data, error } = await client.auth.getSessionFromUrl({
+            url: location.href,
+            storeSession: true
+          });
+          if (error) throw error;
+
+          // 2) Route by link type
+          if (type === 'recovery') {
+            statusEl.textContent = 'Enter your new password.';
+            formEl.classList.remove('hidden');
+
+            formEl.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const p1 = document.getElementById('pw1').value.trim();
+              const p2 = document.getElementById('pw2').value.trim();
+
+              if (p1.length < 8) {
+                statusEl.textContent = 'Password must be at least 8 characters.';
+                panelEl.classList.add('error'); panelEl.classList.remove('success');
+                return;
+              }
+              if (p1 !== p2) {
+                statusEl.textContent = 'Passwords do not match.';
+                panelEl.classList.add('error'); panelEl.classList.remove('success');
+                return;
+              }
+
+              const { error: upErr } = await client.auth.updateUser({ password: p1 });
+              if (upErr) {
+                statusEl.textContent = upErr.message || 'Failed to update password.';
+                panelEl.classList.add('error'); panelEl.classList.remove('success');
+                return;
+              }
+
+              statusEl.textContent = 'Password updated successfully.';
+              panelEl.classList.add('success'); panelEl.classList.remove('error');
+              formEl.classList.add('hidden');
+              doneEl.classList.remove('hidden');
+
+              // Optional: redirect after a few seconds
+              // setTimeout(() => { location.href = 'https://your-app-signin-url'; }, 1500);
+            });
+          } else {
+            // For signup/email_change/magiclink: just show success
+            statusEl.textContent = 'Email verified. You can sign in now.';
+            doneEl.classList.remove('hidden');
+          }
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = 'This link is invalid or expired. Request a new one and try again.';
+          panelEl.classList.add('error'); panelEl.classList.remove('success');
+        }
+      })();
+    </script>
+  </body>
 </html>
