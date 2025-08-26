@@ -18,6 +18,10 @@
     </style>
   </head>
   <body>
+    <script>
+      console.log('At load, location.href =', location.href);
+      console.log('At load, location.hash =', location.hash);
+    </script>
     <h1>Study Buddy</h1>
     <div id="panel" class="card">
       <p id="status">Checking your link...</p>
@@ -44,48 +48,33 @@
       const statusEl = document.getElementById('status');
       const formEl   = document.getElementById('reset-form');
       const doneEl   = document.getElementById('done');
-
       (async () => {
-        // Stash link type BEFORE clearing hash
-        const params = new URLSearchParams(location.hash.slice(1));
-        const linkType = params.get('type'); // "recovery" | "signup" | "magiclink" | ...
-
+        // 1) Read hash BEFORE anything else
+        const rawHash = location.hash;
+        const params = new URLSearchParams(rawHash.slice(1));
+        const linkType = params.get('type'); // should be "recovery" for password reset
+    
         try {
-          // Exchange OTP for a session (consumes once)
+          // 2) Exchange OTP for a session (consumes once)
           const { error } = await client.auth.getSessionFromUrl({ storeSession: true });
           if (error) throw error;
-
-          // Clear hash so refresh doesn't attempt to reuse OTP
+    
+          // 3) Now safe to clear the hash so refresh doesn’t fail
           window.history.replaceState({}, document.title, location.pathname + location.search);
-
+    
           if (linkType === 'recovery') {
             statusEl.textContent = 'Enter your new password.';
             formEl.classList.remove('hidden');
-
-            formEl.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              const p1 = document.getElementById('pw1').value.trim();
-              const p2 = document.getElementById('pw2').value.trim();
-
-              if (p1.length < 8) { statusEl.textContent = 'Password must be at least 8 characters.'; panelEl.classList.add('error'); return; }
-              if (p1 !== p2)     { statusEl.textContent = 'Passwords do not match.';                panelEl.classList.add('error'); return; }
-
-              const { error: upErr } = await client.auth.updateUser({ password: p1 });
-              if (upErr) { statusEl.textContent = upErr.message || 'Failed to update password.'; panelEl.classList.add('error'); return; }
-
-              formEl.classList.add('hidden');
-              doneEl.classList.remove('hidden');
-              panelEl.classList.remove('error'); panelEl.classList.add('success');
-            });
           } else {
             statusEl.textContent = 'Email verified. You can sign in now.';
             doneEl.classList.remove('hidden');
             panelEl.classList.add('success');
           }
         } catch (e) {
-          // e.message usually: "Email link is invalid or has expired"
           statusEl.textContent = 'This link is invalid or expired. Request a new one and try again.';
           panelEl.classList.add('error');
+          console.error('getSessionFromUrl failed:', e);
+          console.log('Initial hash was:', rawHash); // should not be empty if things are correct
         }
       })();
     </script>
